@@ -76,3 +76,57 @@ stderr in human-readable format, and to stdout in JSON format.
 A private HTTP debug server is also started on a random port on localhost. It
 serves the net/http/pprof endpoints, as well as `/debug/logson` and
 `/debug/logsoff` which enable and disable debug logging, respectively.
+
+
+
+
+
+# Docker
+
+## Docker image
+
+### Dockerfile
+```
+# syntax=docker/dockerfile:1.7-labs
+
+FROM golang:1.23
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY *.go ./
+COPY --parents cmd/*/* ./
+COPY --parents internal/*/* ./
+
+RUN GOOS=linux go build -o /docker-go-sunlight ./cmd/sunlight/
+
+CMD ["/docker-go-sunlight","-c","/app/config/sunlight.yaml"]
+```
+
+### build and publish image
+```$ docker build --tag docker-go-sunlight .```
+```$ docker buildx build --platform linux/amd64,linux/arm64 --tag g33kauto/go-sunlight:latest --push . ```
+
+## Container
+
+### Configuration
+
+Créer un répertoire contenant les fichiers suivants :
+- sunlight.yaml (fichier de configuration principal)
+- checkpoints.db (le créer avec la commande 'sqlite3 checkpoints.db "CREATE TABLE checkpoints (logID BLOB PRIMARY KEY, body TEXT)"')
+- roots.pem
+- autres fichiers selon la configuration sunlight.yaml
+
+### host mount
+
+Monter le répertoire contenant la configuration sur le répertoire cible /app/config
+
+### ENV
+Ajouter les variables d'environnement suivantes dans le container
+````
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_ENDPOINT_URL_S3=
+AWS_REGION=
+```
